@@ -1,13 +1,13 @@
-## ? Summary
+## âœ… Summary
 - 
 
-## ?? Related Task
+## ðŸŽ¯ Related Task
 - Notion Task ID: 
 
 ## Checklist
-- [ ] ¼¼ºÎ task ¿Ï·á
-- [ ] AC/DoD ÃæÁ·
-- [ ] Å×½ºÆ® Åë°ú
+- [ ] ì„¸ë¶€ task ì™„ë£Œ
+- [ ] AC/DoD ì¶©ì¡±
+- [ ] í…ŒìŠ¤íŠ¸ í†µê³¼
 
 ## Test
 - [ ] Unit test

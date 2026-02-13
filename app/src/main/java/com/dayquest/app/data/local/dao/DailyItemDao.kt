@@ -1,4 +1,4 @@
-package com.dayquest.app.data.local.dao
+﻿package com.dayquest.app.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -25,4 +25,7 @@ interface DailyItemDao {
 
     @Query("UPDATE daily_items SET status = :status, completedAtEpochMillis = :completedAt WHERE id = :id")
     suspend fun updateStatus(id: Long, status: DailyItemStatus, completedAt: Long?)
+
+    @Query("SELECT COUNT(*) FROM daily_items WHERE dateKey = :dateKey")
+    suspend fun countByDate(dateKey: String): Int
 }

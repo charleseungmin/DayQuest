@@ -1,4 +1,4 @@
-package com.dayquest.app.data.local.dao
+﻿package com.dayquest.app.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.Flow
 interface TaskDao {
     @Query("SELECT * FROM tasks WHERE isActive = 1 ORDER BY createdAtEpochMillis DESC")
     fun observeActiveTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE isActive = 1 ORDER BY createdAtEpochMillis DESC")
+    suspend fun getActiveTasks(): List<TaskEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(task: TaskEntity): Long

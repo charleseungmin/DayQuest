@@ -2,6 +2,7 @@
 
 import com.dayquest.app.core.model.DailyItemStatus
 import com.dayquest.app.data.local.dao.DailyItemDao
+import com.dayquest.app.data.local.entity.DailyItemEntity
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -35,11 +36,25 @@ class UpdateDailyItemStatusUseCase @Inject constructor(
                 val sourceDate = LocalDate.parse(item.dateKey, DateTimeFormatter.ISO_LOCAL_DATE)
                 require(!deferDate.isBefore(sourceDate)) { "deferToDate must be same or after source date" }
 
+                val deferDateKey = deferDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+
                 dailyItemDao.updateState(
                     id = dailyItemId,
                     status = DailyItemStatus.DEFERRED,
                     completedAt = null,
-                    deferredToDateKey = deferDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    deferredToDateKey = deferDateKey
+                )
+
+                // taskId 기준으로 같은 날짜 인스턴스가 이미 있으면 무시된다. (UNIQUE(dateKey, taskId))
+                dailyItemDao.insertAll(
+                    listOf(
+                        DailyItemEntity(
+                            dateKey = deferDateKey,
+                            taskId = item.taskId,
+                            status = DailyItemStatus.TODO,
+                            createdAtEpochMillis = nowEpochMillis
+                        )
+                    )
                 )
             }
 

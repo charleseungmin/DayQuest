@@ -1,4 +1,4 @@
-package com.dayquest.app.data.local.dao
+﻿package com.dayquest.app.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -23,6 +23,32 @@ interface DailyItemDao {
     @Update
     suspend fun update(item: DailyItemEntity)
 
-    @Query("UPDATE daily_items SET status = :status, completedAtEpochMillis = :completedAt WHERE id = :id")
-    suspend fun updateStatus(id: Long, status: DailyItemStatus, completedAt: Long?)
+    @Query("SELECT * FROM daily_items WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): DailyItemEntity?
+
+    @Query("UPDATE daily_items SET status = :status, completedAtEpochMillis = :completedAt, deferredToDateKey = :deferredToDateKey WHERE id = :id")
+    suspend fun updateState(
+        id: Long,
+        status: DailyItemStatus,
+        completedAt: Long?,
+        deferredToDateKey: String?
+    )
+
+    @Query("SELECT COUNT(*) FROM daily_items WHERE dateKey = :dateKey")
+    suspend fun countByDate(dateKey: String): Int
+
+    @Query("SELECT COUNT(*) FROM daily_items WHERE dateKey = :dateKey AND status = :status")
+    suspend fun countByDateAndStatus(dateKey: String, status: DailyItemStatus): Int
+
+    @Query(
+        """
+        SELECT COUNT(*)
+        FROM daily_items di
+        INNER JOIN tasks t ON t.id = di.taskId
+        WHERE di.dateKey = :dateKey
+          AND di.status = :status
+          AND t.isImportant = 1
+        """
+    )
+    suspend fun countImportantByDateAndStatus(dateKey: String, status: DailyItemStatus): Int
 }

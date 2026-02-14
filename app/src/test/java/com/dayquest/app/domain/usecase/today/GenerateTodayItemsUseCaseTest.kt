@@ -1,9 +1,7 @@
-﻿package com.dayquest.app.domain.usecase.today
+package com.dayquest.app.domain.usecase.today
 
 import com.dayquest.app.core.model.DailyItemStatus
 import com.dayquest.app.core.model.RepeatType
-import com.dayquest.app.core.model.TaskPriority
-import com.dayquest.app.core.model.TaskType
 import com.dayquest.app.data.local.dao.DailyItemDao
 import com.dayquest.app.data.local.dao.TaskDao
 import com.dayquest.app.data.local.entity.DailyItemEntity
@@ -26,14 +24,14 @@ class GenerateTodayItemsUseCaseTest {
         val baseDate = LocalDate.of(2026, 2, 1)
         val baseMillis = baseDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-        val taskDao = FakeTaskDao(
+        val taskDao = FakeTaskDaoForGenerate(
             listOf(
                 TaskEntity(id = 1, title = "Daily", repeatType = RepeatType.DAILY, createdAtEpochMillis = baseMillis, updatedAtEpochMillis = baseMillis),
                 TaskEntity(id = 2, title = "Weekly Mon", repeatType = RepeatType.WEEKLY, repeatDaysMask = mondayMask, createdAtEpochMillis = baseMillis, updatedAtEpochMillis = baseMillis),
                 TaskEntity(id = 3, title = "Monthly 1st", repeatType = RepeatType.MONTHLY, createdAtEpochMillis = baseMillis, updatedAtEpochMillis = baseMillis)
             )
         )
-        val dailyDao = FakeDailyItemDao()
+        val dailyDao = FakeDailyItemDaoForGenerate()
         val useCase = GenerateTodayItemsUseCase(taskDao, dailyDao, ShouldGenerateTaskForDateUseCase())
 
         val generated = useCase(LocalDate.of(2026, 2, 2), 1000L) // Monday
@@ -44,7 +42,7 @@ class GenerateTodayItemsUseCaseTest {
     }
 }
 
-private class FakeTaskDao(
+private class FakeTaskDaoForGenerate(
     private val tasks: List<TaskEntity>
 ) : TaskDao {
     override fun observeActiveTasks(): Flow<List<TaskEntity>> = flowOf(tasks)
@@ -55,30 +53,26 @@ private class FakeTaskDao(
     override suspend fun getById(taskId: Long): TaskEntity? = tasks.firstOrNull { it.id == taskId }
 }
 
-private class FakeDailyItemDao : DailyItemDao {
+private class FakeDailyItemDaoForGenerate : DailyItemDao {
     private val items = mutableListOf<DailyItemEntity>()
 
     override fun observeByDate(dateKey: String): Flow<List<DailyItemEntity>> = flowOf(items.filter { it.dateKey == dateKey })
-    override suspend fun insert(item: DailyItemEntity): Long {
-        items += item
-        return item.id
-    }
+    override suspend fun insert(item: DailyItemEntity): Long { items += item; return item.id }
 
     override suspend fun insertAll(items: List<DailyItemEntity>): List<Long> {
         val results = mutableListOf<Long>()
         items.forEach { incoming ->
             val exists = this.items.any { it.dateKey == incoming.dateKey && it.taskId == incoming.taskId }
-            if (exists) {
-                results += -1L
-            } else {
+            if (exists) results += -1L else {
                 this.items += incoming
-                results += (this.items.size).toLong()
+                results += this.items.size.toLong()
             }
         }
         return results
     }
 
     override suspend fun update(item: DailyItemEntity) = Unit
-    override suspend fun updateStatus(id: Long, status: DailyItemStatus, completedAt: Long?) = Unit
+    override suspend fun getById(id: Long): DailyItemEntity? = items.firstOrNull { it.id == id }
+    override suspend fun updateState(id: Long, status: DailyItemStatus, completedAt: Long?, deferredToDateKey: String?) = Unit
     override suspend fun countByDate(dateKey: String): Int = items.count { it.dateKey == dateKey }
 }

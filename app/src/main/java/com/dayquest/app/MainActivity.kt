@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +58,19 @@ data class QuestProgressUi(
     val doneCount: Int,
     val totalCount: Int
 )
+
+data class SettingsUiState(
+    val notificationsEnabled: Boolean = true,
+    val resetDone: Boolean = false
+)
+
+object SettingsLogic {
+    fun toggleNotifications(state: SettingsUiState): SettingsUiState =
+        state.copy(notificationsEnabled = !state.notificationsEnabled)
+
+    fun resetData(state: SettingsUiState): SettingsUiState =
+        state.copy(resetDone = true)
+}
 
 sealed interface TaskManageUiState {
     data object Loading : TaskManageUiState
@@ -165,12 +179,60 @@ private fun DayQuestHome() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { selectedTab = "manage" }) { Text("Task 관리") }
             Button(onClick = { selectedTab = "history" }) { Text("기록 조회") }
+            Button(onClick = { selectedTab = "settings" }) { Text("설정") }
         }
 
-        if (selectedTab == "manage") {
-            TaskManageScreen()
-        } else {
-            HistoryScreen()
+        when (selectedTab) {
+            "manage" -> TaskManageScreen()
+            "history" -> HistoryScreen()
+            else -> SettingsScreen()
+        }
+    }
+}
+
+@Composable
+private fun SettingsScreen() {
+    var state by remember { mutableStateOf(SettingsUiState()) }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("설정", style = MaterialTheme.typography.headlineSmall)
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("알림 사용", style = MaterialTheme.typography.titleMedium)
+                    Text(if (state.notificationsEnabled) "07:00/21:00 알림 활성화" else "알림 비활성화")
+                }
+                Switch(
+                    checked = state.notificationsEnabled,
+                    onCheckedChange = { state = SettingsLogic.toggleNotifications(state) }
+                )
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("데이터 초기화", style = MaterialTheme.typography.titleMedium)
+                Text("학습용 샘플에서는 즉시 로컬 상태를 리셋했다고 가정합니다.")
+                Button(onClick = { state = SettingsLogic.resetData(state) }) {
+                    Text("초기화 실행")
+                }
+                if (state.resetDone) {
+                    Text("초기화가 완료되었습니다.")
+                }
+            }
         }
     }
 }

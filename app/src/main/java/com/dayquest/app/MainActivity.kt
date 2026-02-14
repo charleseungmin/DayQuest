@@ -105,7 +105,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    TaskManageScreen()
+                    DayQuestHome()
                 }
             }
         }
@@ -120,6 +120,29 @@ class MainActivity : ComponentActivity() {
 
         if (!granted) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+}
+
+@Composable
+private fun DayQuestHome() {
+    var selectedTab by remember { mutableStateOf("manage") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { selectedTab = "manage" }) { Text("Task 관리") }
+            Button(onClick = { selectedTab = "history" }) { Text("기록 조회") }
+        }
+
+        if (selectedTab == "manage") {
+            TaskManageScreen()
+        } else {
+            HistoryScreen()
         }
     }
 }

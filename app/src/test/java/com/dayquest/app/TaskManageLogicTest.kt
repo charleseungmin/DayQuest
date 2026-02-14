@@ -37,6 +37,21 @@ class TaskManageLogicTest {
     }
 
     @Test
+    fun `delete clears editing form when target task is being edited`() {
+        val task = TaskItemUi(id = "t1", title = "리뷰", category = "업무", isDone = false)
+        val state = TaskManageUiState.Ready(
+            tasks = listOf(task),
+            form = TaskFormUi(editingTaskId = "t1", title = "리뷰", category = "업무")
+        )
+
+        val updated = TaskManageLogic.delete(state, "t1")
+
+        assertTrue(updated.tasks.isEmpty())
+        assertNull(updated.form.editingTaskId)
+        assertEquals("", updated.form.title)
+    }
+
+    @Test
     fun `shouldCelebrate becomes true when quest is newly completed`() {
         val before = listOf(
             TaskItemUi(id = "t1", title = "A", category = "일반", isDone = true),

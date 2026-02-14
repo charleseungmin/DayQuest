@@ -20,6 +20,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,24 +30,32 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class TaskItemUi(
     val id: String,
     val title: String,
-    val category: String
+    val category: String,
+    val isDone: Boolean = false
 )
 
 data class TaskFormUi(
     val editingTaskId: String? = null,
     val title: String = "",
     val category: String = "일반"
+)
+
+data class QuestProgressUi(
+    val doneCount: Int,
+    val totalCount: Int
 )
 
 sealed interface TaskManageUiState {
@@ -55,6 +66,19 @@ sealed interface TaskManageUiState {
     ) : TaskManageUiState
 
     data class Error(val message: String) : TaskManageUiState
+}
+
+object QuestFeedbackLogic {
+    fun progress(tasks: List<TaskItemUi>): QuestProgressUi {
+        val done = tasks.count { it.isDone }
+        return QuestProgressUi(doneCount = done, totalCount = tasks.size)
+    }
+
+    fun shouldCelebrate(before: List<TaskItemUi>, after: List<TaskItemUi>): Boolean {
+        val prev = progress(before)
+        val next = progress(after)
+        return prev.totalCount > 0 && prev.doneCount < prev.totalCount && next.totalCount > 0 && next.doneCount == next.totalCount
+    }
 }
 
 object TaskManageLogic {
@@ -85,6 +109,10 @@ object TaskManageLogic {
         return state.copy(form = TaskFormUi(editingTaskId = task.id, title = task.title, category = task.category))
     }
 
+    fun toggleDone(state: TaskManageUiState.Ready, taskId: String): TaskManageUiState.Ready {
+        return state.copy(tasks = state.tasks.map { if (it.id == taskId) it.copy(isDone = !it.isDone) else it })
+    }
+
     fun delete(state: TaskManageUiState.Ready, taskId: String): TaskManageUiState.Ready {
         return state.copy(
             tasks = state.tasks.filterNot { it.id == taskId },
@@ -105,7 +133,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    TaskManageScreen()
+                    DayQuestHome()
                 }
             }
         }
@@ -125,8 +153,34 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+private fun DayQuestHome() {
+    var selectedTab by remember { mutableStateOf("manage") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { selectedTab = "manage" }) { Text("Task 관리") }
+            Button(onClick = { selectedTab = "history" }) { Text("기록 조회") }
+        }
+
+        if (selectedTab == "manage") {
+            TaskManageScreen()
+        } else {
+            HistoryScreen()
+        }
+    }
+}
+
+@Composable
 private fun TaskManageScreen() {
     var uiState by remember { mutableStateOf<TaskManageUiState>(TaskManageUiState.Loading) }
+    var showQuestBanner by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         delay(450)
@@ -135,40 +189,97 @@ private fun TaskManageScreen() {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text("TaskManageScreen", style = MaterialTheme.typography.headlineSmall)
+    Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("TaskManageScreen", style = MaterialTheme.typography.headlineSmall)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { uiState = TaskManageUiState.Loading }) { Text("로딩") }
-            Button(onClick = { uiState = TaskManageUiState.Ready() }) { Text("빈상태") }
-            Button(onClick = { uiState = TaskManageUiState.Error("네트워크 오류가 발생했습니다.") }) { Text("오류") }
-        }
-
-        when (val state = uiState) {
-            TaskManageUiState.Loading -> LoadingCard()
-            is TaskManageUiState.Error -> ErrorCard(
-                message = state.message,
-                onRetry = { uiState = TaskManageUiState.Ready() }
-            )
-
-            is TaskManageUiState.Ready -> {
-                TaskFormCard(
-                    form = state.form,
-                    onTitleChange = { uiState = state.copy(form = state.form.copy(title = it)) },
-                    onCategoryChange = { uiState = state.copy(form = state.form.copy(category = it)) },
-                    onSubmit = { uiState = TaskManageLogic.upsert(state) }
-                )
-                TaskListCard(
-                    tasks = state.tasks,
-                    onEdit = { uiState = TaskManageLogic.edit(state, it) },
-                    onDelete = { uiState = TaskManageLogic.delete(state, it) }
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    showQuestBanner = false
+                    uiState = TaskManageUiState.Loading
+                }) { Text("로딩") }
+                Button(onClick = {
+                    showQuestBanner = false
+                    uiState = TaskManageUiState.Ready()
+                }) { Text("빈상태") }
+                Button(onClick = {
+                    showQuestBanner = false
+                    uiState = TaskManageUiState.Error("네트워크 오류가 발생했습니다.")
+                }) { Text("오류") }
             }
+
+            when (val state = uiState) {
+                TaskManageUiState.Loading -> LoadingCard()
+                is TaskManageUiState.Error -> ErrorCard(
+                    message = state.message,
+                    onRetry = {
+                        showQuestBanner = false
+                        uiState = TaskManageUiState.Ready()
+                    }
+                )
+
+                is TaskManageUiState.Ready -> {
+                    val progress = QuestFeedbackLogic.progress(state.tasks)
+                    if (showQuestBanner) {
+                        QuestCompletionBanner(progress)
+                    }
+                    QuestProgressCard(progress)
+                    TaskFormCard(
+                        form = state.form,
+                        onTitleChange = { uiState = state.copy(form = state.form.copy(title = it)) },
+                        onCategoryChange = { uiState = state.copy(form = state.form.copy(category = it)) },
+                        onSubmit = { uiState = TaskManageLogic.upsert(state) }
+                    )
+                    TaskListCard(
+                        tasks = state.tasks,
+                        onToggleDone = { taskId ->
+                            val updated = TaskManageLogic.toggleDone(state, taskId)
+                            val celebrate = QuestFeedbackLogic.shouldCelebrate(state.tasks, updated.tasks)
+                            uiState = updated
+                            if (celebrate) {
+                                showQuestBanner = true
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("퀘스트 달성! 오늘 할 일을 전부 완료했어요 ⚒️")
+                                }
+                            }
+                        },
+                        onEdit = { uiState = TaskManageLogic.edit(state, it) },
+                        onDelete = { uiState = TaskManageLogic.delete(state, it) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestProgressCard(progress: QuestProgressUi) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text("오늘의 퀘스트", style = MaterialTheme.typography.titleMedium)
+            Text("진행도 ${progress.doneCount} / ${progress.totalCount}")
+        }
+    }
+}
+
+@Composable
+private fun QuestCompletionBanner(progress: QuestProgressUi) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text("🎉 퀘스트 달성!", style = MaterialTheme.typography.titleMedium)
+            Text("${progress.doneCount}개 할 일을 모두 완료했습니다.")
         }
     }
 }
@@ -245,6 +356,7 @@ private fun TaskFormCard(
 @Composable
 private fun TaskListCard(
     tasks: List<TaskItemUi>,
+    onToggleDone: (String) -> Unit,
     onEdit: (String) -> Unit,
     onDelete: (String) -> Unit
 ) {
@@ -269,27 +381,16 @@ private fun TaskListCard(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(task.title, style = MaterialTheme.typography.titleSmall)
-                            Text(task.category, style = MaterialTheme.typography.bodySmall)
+                            Text("${task.category} · ${if (task.isDone) "완료" else "진행중"}", style = MaterialTheme.typography.bodySmall)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Button(onClick = { onToggleDone(task.id) }) { Text(if (task.isDone) "되돌리기" else "완료") }
                             Button(onClick = { onEdit(task.id) }) { Text("수정") }
                             Button(onClick = { onDelete(task.id) }) { Text("삭제") }
                         }
                     }
                 }
             }
-        }
-    }
-
-    private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        val granted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (!granted) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 }

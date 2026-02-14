@@ -117,4 +117,7 @@ private class FakeQuestDao(
 
     override suspend fun getByType(dateKey: String, questType: QuestType): QuestEntity? =
         quests.firstOrNull { it.dateKey == dateKey && it.questType == questType }
+
+    override suspend fun countAchievedByDate(dateKey: String): Int =
+        quests.count { it.dateKey == dateKey && it.achieved }
 }

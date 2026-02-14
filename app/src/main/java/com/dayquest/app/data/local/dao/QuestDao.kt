@@ -22,4 +22,7 @@ interface QuestDao {
 
     @Query("SELECT * FROM quests WHERE dateKey = :dateKey AND questType = :questType LIMIT 1")
     suspend fun getByType(dateKey: String, questType: QuestType): QuestEntity?
+
+    @Query("SELECT COUNT(*) FROM quests WHERE dateKey = :dateKey AND achieved = 1")
+    suspend fun countAchievedByDate(dateKey: String): Int
 }

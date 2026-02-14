@@ -13,6 +13,9 @@ interface StreakDao {
     @Query("SELECT * FROM streaks WHERE id = 1 LIMIT 1")
     fun observe(): Flow<StreakEntity?>
 
+    @Query("SELECT * FROM streaks WHERE id = 1 LIMIT 1")
+    suspend fun get(): StreakEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(streak: StreakEntity)
 

@@ -75,4 +75,7 @@ private class FakeDailyItemDaoForGenerate : DailyItemDao {
     override suspend fun getById(id: Long): DailyItemEntity? = items.firstOrNull { it.id == id }
     override suspend fun updateState(id: Long, status: DailyItemStatus, completedAt: Long?, deferredToDateKey: String?) = Unit
     override suspend fun countByDate(dateKey: String): Int = items.count { it.dateKey == dateKey }
+    override suspend fun countByDateAndStatus(dateKey: String, status: DailyItemStatus): Int =
+        items.count { it.dateKey == dateKey && it.status == status }
+    override suspend fun countImportantByDateAndStatus(dateKey: String, status: DailyItemStatus): Int = 0
 }

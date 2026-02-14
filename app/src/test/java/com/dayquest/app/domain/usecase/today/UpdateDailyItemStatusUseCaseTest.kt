@@ -113,6 +113,11 @@ private class FakeDailyItemDaoForUpdate(
 
     override suspend fun countByDate(dateKey: String): Int = items.values.count { it.dateKey == dateKey }
 
+    override suspend fun countByDateAndStatus(dateKey: String, status: DailyItemStatus): Int =
+        items.values.count { it.dateKey == dateKey && it.status == status }
+
+    override suspend fun countImportantByDateAndStatus(dateKey: String, status: DailyItemStatus): Int = 0
+
     fun findByDateAndTask(dateKey: String, taskId: Long): DailyItemEntity? =
         items.values.firstOrNull { it.dateKey == dateKey && it.taskId == taskId }
 

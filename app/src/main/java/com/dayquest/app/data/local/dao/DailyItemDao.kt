@@ -36,4 +36,19 @@ interface DailyItemDao {
 
     @Query("SELECT COUNT(*) FROM daily_items WHERE dateKey = :dateKey")
     suspend fun countByDate(dateKey: String): Int
+
+    @Query("SELECT COUNT(*) FROM daily_items WHERE dateKey = :dateKey AND status = :status")
+    suspend fun countByDateAndStatus(dateKey: String, status: DailyItemStatus): Int
+
+    @Query(
+        """
+        SELECT COUNT(*)
+        FROM daily_items di
+        INNER JOIN tasks t ON t.id = di.taskId
+        WHERE di.dateKey = :dateKey
+          AND di.status = :status
+          AND t.isImportant = 1
+        """
+    )
+    suspend fun countImportantByDateAndStatus(dateKey: String, status: DailyItemStatus): Int
 }

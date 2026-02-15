@@ -191,6 +191,36 @@ private fun DayQuestHome() {
 }
 
 @Composable
+private fun HistoryScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("기록 조회", style = MaterialTheme.typography.headlineSmall)
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("오늘", style = MaterialTheme.typography.titleMedium)
+                Text("완료 0개 / 총 0개")
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("주간", style = MaterialTheme.typography.titleMedium)
+                Text("이번 주 누적 완료 0개")
+            }
+        }
+    }
+}
+
+@Composable
 private fun SettingsScreen() {
     var state by remember { mutableStateOf(SettingsUiState()) }
 

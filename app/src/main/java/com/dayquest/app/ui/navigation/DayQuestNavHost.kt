@@ -13,10 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.dayquest.app.ui.screen.HistoryScreen
 import com.dayquest.app.ui.screen.SettingsScreen
 import com.dayquest.app.ui.screen.TaskManageScreen
@@ -28,6 +30,9 @@ private enum class DayQuestRoute(val route: String, val label: String) {
     History("history", "History"),
     Settings("settings", "Settings")
 }
+
+private const val EDIT_TASK_ID_ARG = "editTaskId"
+private const val MANAGE_ROUTE_WITH_OPTIONAL_EDIT = "manage?$EDIT_TASK_ID_ARG={$EDIT_TASK_ID_ARG}"
 
 @Composable
 fun DayQuestNavHost() {
@@ -79,8 +84,26 @@ fun DayQuestNavHost() {
             startDestination = DayQuestRoute.Today.route,
             modifier = Modifier.fillMaxSize()
         ) {
-            composable(DayQuestRoute.Today.route) { TodayScreen() }
-            composable(DayQuestRoute.Manage.route) { TaskManageScreen() }
+            composable(DayQuestRoute.Today.route) {
+                TodayScreen(
+                    onGoToManage = { navController.navigate(DayQuestRoute.Manage.route) },
+                    onEditTask = { taskId ->
+                        navController.navigate("manage?$EDIT_TASK_ID_ARG=$taskId")
+                    }
+                )
+            }
+            composable(
+                route = MANAGE_ROUTE_WITH_OPTIONAL_EDIT,
+                arguments = listOf(navArgument(EDIT_TASK_ID_ARG) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                })
+            ) { backStackEntry ->
+                TaskManageScreen(
+                    initialEditTaskId = backStackEntry.arguments?.getString(EDIT_TASK_ID_ARG)
+                )
+            }
             composable(DayQuestRoute.History.route) { HistoryScreen() }
             composable(DayQuestRoute.Settings.route) { SettingsScreen() }
         }

@@ -9,6 +9,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.dayquest.app.ui.component.ErrorCard
 import com.dayquest.app.ui.component.LoadingCard
 import com.dayquest.app.ui.component.QuestCompletionBanner
@@ -23,25 +25,22 @@ import com.dayquest.app.ui.component.QuestProgressCard
 import com.dayquest.app.ui.component.ScreenSectionHeader
 import com.dayquest.app.ui.component.TaskFormCard
 import com.dayquest.app.ui.component.TaskListCard
-import com.dayquest.app.ui.component.TaskStateDebugCard
 import com.dayquest.app.ui.logic.QuestFeedbackLogic
-import com.dayquest.app.ui.logic.TaskManageLogic
 import com.dayquest.app.ui.model.TaskManageUiState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun TaskManageScreen() {
-    var uiState by remember { mutableStateOf<TaskManageUiState>(TaskManageUiState.Loading) }
+fun TaskManageScreen(
+    initialEditTaskId: String? = null,
+    viewModel: TaskManageViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
     var showQuestBanner by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        delay(450)
-        if (uiState is TaskManageUiState.Loading) {
-            uiState = TaskManageUiState.Ready()
-        }
+    LaunchedEffect(initialEditTaskId) {
+        viewModel.requestEdit(initialEditTaskId)
     }
 
     Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
@@ -57,32 +56,21 @@ fun TaskManageScreen() {
                 subtitle = "Task 등록 · 진행 · 완료 흐름"
             )
 
-            TaskStateDebugCard(
-                onLoading = {
-                    showQuestBanner = false
-                    uiState = TaskManageUiState.Loading
-                },
-                onEmpty = {
-                    showQuestBanner = false
-                    uiState = TaskManageUiState.Ready()
-                },
-                onError = {
-                    showQuestBanner = false
-                    uiState = TaskManageUiState.Error("네트워크 오류가 발생했습니다.")
-                }
-            )
-
             when (val state = uiState) {
                 TaskManageUiState.Loading -> LoadingCard()
                 is TaskManageUiState.Error -> ErrorCard(
                     message = state.message,
-                    onRetry = {
-                        showQuestBanner = false
-                        uiState = TaskManageUiState.Ready()
-                    }
+                    onRetry = viewModel::retry
                 )
 
                 is TaskManageUiState.Ready -> {
+                    LaunchedEffect(state.noticeMessage) {
+                        if (!state.noticeMessage.isNullOrBlank()) {
+                            snackbarHostState.showSnackbar(state.noticeMessage)
+                            viewModel.consumeNotice()
+                        }
+                    }
+
                     val progress = QuestFeedbackLogic.progress(state.tasks)
                     if (showQuestBanner) {
                         QuestCompletionBanner(progress)
@@ -90,16 +78,17 @@ fun TaskManageScreen() {
                     QuestProgressCard(progress)
                     TaskFormCard(
                         form = state.form,
-                        onTitleChange = { uiState = state.copy(form = state.form.copy(title = it)) },
-                        onCategoryChange = { uiState = state.copy(form = state.form.copy(category = it)) },
-                        onSubmit = { uiState = TaskManageLogic.upsert(state) }
+                        onTitleChange = viewModel::updateTitle,
+                        onCategoryChange = viewModel::updateCategory,
+                        onSubmit = viewModel::upsert
                     )
                     TaskListCard(
                         tasks = state.tasks,
                         onToggleDone = { taskId ->
-                            val updated = TaskManageLogic.toggleDone(state, taskId)
-                            val celebrate = QuestFeedbackLogic.shouldCelebrate(state.tasks, updated.tasks)
-                            uiState = updated
+                            val before = state.tasks
+                            viewModel.toggleDone(taskId)
+                            val after = state.tasks.map { if (it.id == taskId) it.copy(isDone = !it.isDone) else it }
+                            val celebrate = QuestFeedbackLogic.shouldCelebrate(before, after)
                             if (celebrate) {
                                 showQuestBanner = true
                                 coroutineScope.launch {
@@ -107,8 +96,8 @@ fun TaskManageScreen() {
                                 }
                             }
                         },
-                        onEdit = { uiState = TaskManageLogic.edit(state, it) },
-                        onDelete = { uiState = TaskManageLogic.delete(state, it) }
+                        onEdit = viewModel::edit,
+                        onDelete = viewModel::delete
                     )
                 }
             }

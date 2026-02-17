@@ -57,6 +57,7 @@ private class FakeDailyItemDaoForGenerate : DailyItemDao {
     private val items = mutableListOf<DailyItemEntity>()
 
     override fun observeByDate(dateKey: String): Flow<List<DailyItemEntity>> = flowOf(items.filter { it.dateKey == dateKey })
+    override fun observeTodayTasks(dateKey: String) = flowOf(emptyList<com.dayquest.app.data.local.projection.TodayTaskRow>())
     override suspend fun insert(item: DailyItemEntity): Long { items += item; return item.id }
 
     override suspend fun insertAll(items: List<DailyItemEntity>): List<Long> {

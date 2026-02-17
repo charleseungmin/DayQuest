@@ -151,7 +151,11 @@ fun TaskListCard(
     tasks: List<TaskItemUi>,
     onToggleDone: (String) -> Unit,
     onEdit: (String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onDefer: (String) -> Unit = {},
+    showEditAction: Boolean = true,
+    showDeleteAction: Boolean = true,
+    showDeferAction: Boolean = false
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         if (tasks.isEmpty()) {
@@ -174,12 +178,28 @@ fun TaskListCard(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(task.title, style = MaterialTheme.typography.titleSmall)
-                            Text("${task.category} · ${if (task.isDone) "완료" else "진행중"}", style = MaterialTheme.typography.bodySmall)
+                            val statusLabel = when {
+                                task.isDone -> "완료"
+                                task.isDeferred -> "미룸"
+                                else -> "진행중"
+                            }
+                            Text("${task.category} · $statusLabel", style = MaterialTheme.typography.bodySmall)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Button(onClick = { onToggleDone(task.id) }) { Text(if (task.isDone) "되돌리기" else "완료") }
-                            Button(onClick = { onEdit(task.id) }) { Text("수정") }
-                            Button(onClick = { onDelete(task.id) }) { Text("삭제") }
+                            Button(onClick = { onToggleDone(task.id) }) {
+                                Text(if (task.isDone) "되돌리기" else "완료")
+                            }
+                            if (showDeferAction) {
+                                Button(onClick = { onDefer(task.id) }) {
+                                    Text(if (task.isDeferred) "복원" else "미루기")
+                                }
+                            }
+                            if (showEditAction) {
+                                Button(onClick = { onEdit(task.id) }) { Text("수정") }
+                            }
+                            if (showDeleteAction) {
+                                Button(onClick = { onDelete(task.id) }) { Text("삭제") }
+                            }
                         }
                     }
                 }

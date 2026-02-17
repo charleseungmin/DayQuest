@@ -1,0 +1,39 @@
+package com.dayquest.app.domain.usecase.task
+
+import com.dayquest.app.data.local.entity.TaskEntity
+import com.dayquest.app.domain.repository.TaskRepository
+import javax.inject.Inject
+
+class SaveManageTaskUseCase @Inject constructor(
+    private val taskRepository: TaskRepository
+) {
+    suspend operator fun invoke(taskId: Long?, title: String, category: String, now: Long): SaveManageTaskResult {
+        if (taskId == null) {
+            taskRepository.insert(
+                TaskEntity(
+                    title = title,
+                    description = category,
+                    createdAtEpochMillis = now,
+                    updatedAtEpochMillis = now
+                )
+            )
+            return SaveManageTaskResult.Created
+        }
+
+        val existing = taskRepository.getTask(taskId) ?: return SaveManageTaskResult.MissingTarget
+        taskRepository.update(
+            existing.copy(
+                title = title,
+                description = category,
+                updatedAtEpochMillis = now
+            )
+        )
+        return SaveManageTaskResult.Updated
+    }
+}
+
+enum class SaveManageTaskResult {
+    Created,
+    Updated,
+    MissingTarget
+}

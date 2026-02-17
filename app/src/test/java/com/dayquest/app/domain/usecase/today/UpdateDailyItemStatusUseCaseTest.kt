@@ -84,6 +84,7 @@ private class FakeDailyItemDaoForUpdate(
     private var idSeq: Long = (items.keys.maxOrNull() ?: 0L) + 1L
 
     override fun observeByDate(dateKey: String): Flow<List<DailyItemEntity>> = flowOf(items.values.filter { it.dateKey == dateKey })
+    override fun observeTodayTasks(dateKey: String) = flowOf(emptyList<com.dayquest.app.data.local.projection.TodayTaskRow>())
 
     override suspend fun insert(item: DailyItemEntity): Long {
         val exists = items.values.any { it.dateKey == item.dateKey && it.taskId == item.taskId }

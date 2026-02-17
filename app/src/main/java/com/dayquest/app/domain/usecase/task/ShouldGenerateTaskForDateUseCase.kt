@@ -18,18 +18,24 @@ class ShouldGenerateTaskForDateUseCase @Inject constructor() {
 
         return when (repeatType) {
             RepeatType.DAILY -> true
-            RepeatType.WEEKLY -> isWeeklyMatch(targetDate.dayOfWeek, repeatDaysMask)
+            RepeatType.WEEKLY -> isWeeklyMatch(targetDate.dayOfWeek, resolveWeeklyMask(repeatDaysMask, baseDate.dayOfWeek))
             RepeatType.MONTHLY -> {
                 val lastDay = YearMonth.from(targetDate).lengthOfMonth()
                 val day = minOf(baseDate.dayOfMonth, lastDay)
                 targetDate.dayOfMonth == day
             }
-            RepeatType.CUSTOM -> isWeeklyMatch(targetDate.dayOfWeek, repeatDaysMask)
+            RepeatType.CUSTOM -> isWeeklyMatch(targetDate.dayOfWeek, resolveWeeklyMask(repeatDaysMask, baseDate.dayOfWeek))
         }
     }
 
-    private fun isWeeklyMatch(dayOfWeek: DayOfWeek, repeatDaysMask: Int?): Boolean {
-        if (repeatDaysMask == null || repeatDaysMask == 0) return false
+    private fun resolveWeeklyMask(repeatDaysMask: Int?, baseDayOfWeek: DayOfWeek): Int {
+        if (repeatDaysMask == null || repeatDaysMask == 0) {
+            return makeWeeklyMask(baseDayOfWeek)
+        }
+        return repeatDaysMask
+    }
+
+    private fun isWeeklyMatch(dayOfWeek: DayOfWeek, repeatDaysMask: Int): Boolean {
         val bit = 1 shl (dayOfWeek.value - 1) // MON=0 .. SUN=6
         return (repeatDaysMask and bit) != 0
     }

@@ -1,5 +1,6 @@
 package com.dayquest.app.domain.usecase.task
 
+import com.dayquest.app.core.model.TaskPriority
 import com.dayquest.app.data.local.entity.TaskEntity
 import com.dayquest.app.domain.repository.TaskRepository
 import javax.inject.Inject
@@ -7,7 +8,14 @@ import javax.inject.Inject
 class SaveManageTaskUseCase @Inject constructor(
     private val taskRepository: TaskRepository
 ) {
-    suspend operator fun invoke(taskId: Long?, title: String, category: String, isImportant: Boolean, now: Long): SaveManageTaskResult {
+    suspend operator fun invoke(
+        taskId: Long?,
+        title: String,
+        category: String,
+        priority: TaskPriority,
+        isImportant: Boolean,
+        now: Long
+    ): SaveManageTaskResult {
         val normalizedTitle = title.trim().lowercase()
         val hasDuplicateTitle = taskRepository
             .getActiveTasks()
@@ -21,6 +29,7 @@ class SaveManageTaskUseCase @Inject constructor(
                 TaskEntity(
                     title = title,
                     description = category,
+                    priority = priority,
                     isImportant = isImportant,
                     createdAtEpochMillis = now,
                     updatedAtEpochMillis = now
@@ -34,6 +43,7 @@ class SaveManageTaskUseCase @Inject constructor(
             existing.copy(
                 title = title,
                 description = category,
+                priority = priority,
                 isImportant = isImportant,
                 updatedAtEpochMillis = now
             )

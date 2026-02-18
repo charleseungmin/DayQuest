@@ -1,5 +1,6 @@
 package com.dayquest.app.ui.model
 
+import com.dayquest.app.core.model.TaskPriority
 import java.util.UUID
 
 data class TaskItemUi(
@@ -7,6 +8,7 @@ data class TaskItemUi(
     val sourceTaskId: String? = null,
     val title: String,
     val category: String,
+    val priority: TaskPriority = TaskPriority.MEDIUM,
     val isImportant: Boolean = false,
     val isDone: Boolean = false,
     val isDeferred: Boolean = false
@@ -16,6 +18,7 @@ data class TaskFormUi(
     val editingTaskId: String? = null,
     val title: String = "",
     val category: String = "일반",
+    val priority: TaskPriority = TaskPriority.MEDIUM,
     val isImportant: Boolean = false
 )
 

@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.dayquest.app.core.model.TaskPriority
 import com.dayquest.app.ui.model.QuestProgressUi
 import com.dayquest.app.ui.model.StreakUi
 import com.dayquest.app.ui.model.TaskFormUi
@@ -129,6 +130,7 @@ fun TaskFormCard(
     form: TaskFormUi,
     onTitleChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
+    onPriorityChange: (TaskPriority) -> Unit,
     onImportantChange: (Boolean) -> Unit,
     onSubmit: () -> Unit
 ) {
@@ -155,6 +157,25 @@ fun TaskFormCard(
                 label = { Text("카테고리") },
                 singleLine = true
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TaskPriority.entries.forEach { priority ->
+                    Button(
+                        onClick = { onPriorityChange(priority) },
+                        enabled = form.priority != priority
+                    ) {
+                        Text(
+                            when (priority) {
+                                TaskPriority.HIGH -> "높음"
+                                TaskPriority.MEDIUM -> "보통"
+                                TaskPriority.LOW -> "낮음"
+                            }
+                        )
+                    }
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -210,8 +231,13 @@ fun TaskListCard(
                                 task.isDeferred -> "미룸"
                                 else -> "진행중"
                             }
+                            val priorityLabel = when (task.priority) {
+                                TaskPriority.HIGH -> "높음"
+                                TaskPriority.MEDIUM -> "보통"
+                                TaskPriority.LOW -> "낮음"
+                            }
                             val importantLabel = if (task.isImportant) " · 중요" else ""
-                            Text("${task.category}$importantLabel · $statusLabel", style = MaterialTheme.typography.bodySmall)
+                            Text("${task.category} · 우선순위 $priorityLabel$importantLabel · $statusLabel", style = MaterialTheme.typography.bodySmall)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Button(onClick = { onToggleDone(task.id) }) {

@@ -22,6 +22,7 @@ interface DailyItemDao {
                di.taskId AS sourceTaskId,
                t.title AS title,
                COALESCE(t.description, '일반') AS category,
+               t.priority AS priority,
                t.isImportant AS isImportant,
                di.status AS status
         FROM daily_items di

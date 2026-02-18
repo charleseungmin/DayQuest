@@ -2,6 +2,7 @@ package com.dayquest.app.ui.screen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dayquest.app.core.model.TaskPriority
 import com.dayquest.app.data.local.entity.TaskEntity
 import com.dayquest.app.domain.usecase.task.DeleteManageTaskUseCase
 import com.dayquest.app.domain.usecase.task.ObserveManageTasksUseCase
@@ -53,6 +54,10 @@ class TaskManageViewModel @Inject constructor(
         _uiState.updateReady { it.copy(form = it.form.copy(category = category)) }
     }
 
+    fun updatePriority(priority: TaskPriority) {
+        _uiState.updateReady { it.copy(form = it.form.copy(priority = priority)) }
+    }
+
     fun updateImportant(isImportant: Boolean) {
         _uiState.updateReady { it.copy(form = it.form.copy(isImportant = isImportant)) }
     }
@@ -60,7 +65,15 @@ class TaskManageViewModel @Inject constructor(
     fun edit(taskId: String) {
         _uiState.updateReady { state ->
             val task = state.tasks.firstOrNull { it.id == taskId } ?: return@updateReady state
-            state.copy(form = TaskFormUi(editingTaskId = task.id, title = task.title, category = task.category, isImportant = task.isImportant))
+            state.copy(
+                form = TaskFormUi(
+                    editingTaskId = task.id,
+                    title = task.title,
+                    category = task.category,
+                    priority = task.priority,
+                    isImportant = task.isImportant
+                )
+            )
         }
     }
 
@@ -71,7 +84,15 @@ class TaskManageViewModel @Inject constructor(
             if (state.tasks.any { it.id == taskId }) {
                 pendingEditTaskId = null
                 val task = state.tasks.first { it.id == taskId }
-                state.copy(form = TaskFormUi(editingTaskId = task.id, title = task.title, category = task.category, isImportant = task.isImportant))
+                state.copy(
+                    form = TaskFormUi(
+                        editingTaskId = task.id,
+                        title = task.title,
+                        category = task.category,
+                        priority = task.priority,
+                        isImportant = task.isImportant
+                    )
+                )
             } else {
                 state
             }
@@ -83,11 +104,21 @@ class TaskManageViewModel @Inject constructor(
         val title = state.form.title.trim()
         if (title.isEmpty()) return
         val category = state.form.category.trim().ifEmpty { "일반" }
+        val priority = state.form.priority
         val isImportant = state.form.isImportant
         val taskId = state.form.editingTaskId?.toLongOrNull()
 
         viewModelScope.launch {
-            when (saveManageTaskUseCase(taskId = taskId, title = title, category = category, isImportant = isImportant, now = System.currentTimeMillis())) {
+            when (
+                saveManageTaskUseCase(
+                    taskId = taskId,
+                    title = title,
+                    category = category,
+                    priority = priority,
+                    isImportant = isImportant,
+                    now = System.currentTimeMillis()
+                )
+            ) {
                 SaveManageTaskResult.Created,
                 SaveManageTaskResult.Updated -> _uiState.updateReady { it.copy(form = TaskFormUi(), noticeMessage = null) }
 
@@ -148,7 +179,13 @@ class TaskManageViewModel @Inject constructor(
                         ?.let { editId ->
                             mapped.firstOrNull { it.id == editId }?.let {
                                 pendingEditTaskId = null
-                                TaskFormUi(editingTaskId = it.id, title = it.title, category = it.category, isImportant = it.isImportant)
+                                TaskFormUi(
+                                    editingTaskId = it.id,
+                                    title = it.title,
+                                    category = it.category,
+                                    priority = it.priority,
+                                    isImportant = it.isImportant
+                                )
                             }
                         }
                         ?: currentForm
@@ -173,6 +210,7 @@ private fun TaskEntity.toTaskItemUi(isDone: Boolean): TaskItemUi {
         id = id.toString(),
         title = title,
         category = description?.takeIf { it.isNotBlank() } ?: "일반",
+        priority = priority,
         isImportant = isImportant,
         isDone = isDone
     )

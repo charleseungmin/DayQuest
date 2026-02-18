@@ -118,6 +118,7 @@ internal fun todayTaskRowToTaskItemUi(row: TodayTaskRow): TaskItemUi =
         sourceTaskId = row.sourceTaskId.toString(),
         title = row.title,
         category = row.category,
+        priority = row.priority,
         isImportant = row.isImportant,
         isDone = row.status == DailyItemStatus.DONE,
         isDeferred = row.status == DailyItemStatus.DEFERRED

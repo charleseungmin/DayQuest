@@ -1,5 +1,6 @@
 package com.dayquest.app.ui.logic
 
+import com.dayquest.app.core.model.TaskPriority
 import com.dayquest.app.ui.model.TaskItemUi
 
 enum class TodayTaskFilter(val label: String) {
@@ -27,20 +28,36 @@ fun buildTodayFilterCounts(tasks: List<TaskItemUi>): Map<TodayTaskFilter, Int> =
 
 enum class TodayTaskSort(val label: String) {
     Recommended("추천순"),
+    PriorityFirst("우선순위"),
     ImportantFirst("중요 우선"),
     TitleAscending("제목 가나다")
 }
 
 fun sortTodayTasks(tasks: List<TaskItemUi>, sort: TodayTaskSort): List<TaskItemUi> {
-    val recommendedComparator = compareByDescending<TaskItemUi> { it.isImportant }
+    val priorityRank: (TaskItemUi) -> Int = {
+        when (it.priority) {
+            TaskPriority.HIGH -> 0
+            TaskPriority.MEDIUM -> 1
+            TaskPriority.LOW -> 2
+        }
+    }
+
+    val recommendedComparator = compareBy<TaskItemUi> { priorityRank(it) }
+        .thenByDescending { it.isImportant }
         .thenBy { if (it.isDone) 1 else 0 }
         .thenBy { if (it.isDeferred) 1 else 0 }
         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
 
     return when (sort) {
         TodayTaskSort.Recommended -> tasks.sortedWith(recommendedComparator)
+        TodayTaskSort.PriorityFirst -> tasks.sortedWith(
+            compareBy<TaskItemUi> { priorityRank(it) }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+        )
+
         TodayTaskSort.ImportantFirst -> tasks.sortedWith(
             compareByDescending<TaskItemUi> { it.isImportant }
+                .thenBy { priorityRank(it) }
                 .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
         )
 

@@ -57,6 +57,7 @@ private class FakeDailyItemDaoForGenerate : DailyItemDao {
     private val items = mutableListOf<DailyItemEntity>()
 
     override fun observeByDate(dateKey: String): Flow<List<DailyItemEntity>> = flowOf(items.filter { it.dateKey == dateKey })
+    override fun observeTodayTasks(dateKey: String) = flowOf(emptyList<com.dayquest.app.data.local.projection.TodayTaskRow>())
     override suspend fun insert(item: DailyItemEntity): Long { items += item; return item.id }
 
     override suspend fun insertAll(items: List<DailyItemEntity>): List<Long> {
@@ -75,7 +76,16 @@ private class FakeDailyItemDaoForGenerate : DailyItemDao {
     override suspend fun getById(id: Long): DailyItemEntity? = items.firstOrNull { it.id == id }
     override suspend fun updateState(id: Long, status: DailyItemStatus, completedAt: Long?, deferredToDateKey: String?) = Unit
     override suspend fun countByDate(dateKey: String): Int = items.count { it.dateKey == dateKey }
+    override fun observeCountByDate(dateKey: String): Flow<Int> = flowOf(items.count { it.dateKey == dateKey })
     override suspend fun countByDateAndStatus(dateKey: String, status: DailyItemStatus): Int =
         items.count { it.dateKey == dateKey && it.status == status }
+    override fun observeCountByDateAndStatus(dateKey: String, status: DailyItemStatus): Flow<Int> =
+        flowOf(items.count { it.dateKey == dateKey && it.status == status })
+    override fun observeCountByDateRangeAndStatus(startDateKey: String, endDateKey: String, status: DailyItemStatus): Flow<Int> =
+        flowOf(items.count { it.dateKey in startDateKey..endDateKey && it.status == status })
+    override fun observeCountByDateRange(startDateKey: String, endDateKey: String): Flow<Int> =
+        flowOf(items.count { it.dateKey in startDateKey..endDateKey })
+    override fun observeDailyProgressByDateRange(startDateKey: String, endDateKey: String): Flow<List<com.dayquest.app.data.local.projection.HistoryDailyProgressRow>> =
+        flowOf(emptyList())
     override suspend fun countImportantByDateAndStatus(dateKey: String, status: DailyItemStatus): Int = 0
 }

@@ -43,4 +43,54 @@ class ShouldGenerateTaskForDateUseCaseTest {
 
         assertFalse(useCase(RepeatType.DAILY, base, target, null))
     }
+
+    @Test
+    fun weekly_repeat_without_mask_should_fallback_to_base_day() {
+        val base = LocalDate.of(2026, 2, 10) // Tuesday
+
+        assertTrue(useCase(RepeatType.WEEKLY, base, LocalDate.of(2026, 2, 17), null)) // Tuesday
+        assertFalse(useCase(RepeatType.WEEKLY, base, LocalDate.of(2026, 2, 18), null)) // Wednesday
+    }
+
+    @Test
+    fun custom_repeat_with_zero_mask_should_fallback_to_base_day() {
+        val base = LocalDate.of(2026, 2, 12) // Thursday
+
+        assertTrue(useCase(RepeatType.CUSTOM, base, LocalDate.of(2026, 2, 19), 0)) // Thursday
+        assertFalse(useCase(RepeatType.CUSTOM, base, LocalDate.of(2026, 2, 20), 0)) // Friday
+    }
+
+    @Test
+    fun weekly_mask_should_support_sunday_bit_correctly() {
+        val base = LocalDate.of(2026, 2, 10) // Tuesday
+        val sundayOnly = ShouldGenerateTaskForDateUseCase.makeWeeklyMask(DayOfWeek.SUNDAY)
+
+        assertTrue(useCase(RepeatType.WEEKLY, base, LocalDate.of(2026, 2, 15), sundayOnly)) // Sunday
+        assertFalse(useCase(RepeatType.WEEKLY, base, LocalDate.of(2026, 2, 16), sundayOnly)) // Monday
+    }
+
+    @Test
+    fun custom_repeat_should_use_provided_mask_instead_of_base_day() {
+        val base = LocalDate.of(2026, 2, 10) // Tuesday
+        val mondayAndWednesday = ShouldGenerateTaskForDateUseCase.makeWeeklyMask(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY)
+
+        assertTrue(useCase(RepeatType.CUSTOM, base, LocalDate.of(2026, 2, 11), mondayAndWednesday)) // Wednesday
+        assertFalse(useCase(RepeatType.CUSTOM, base, LocalDate.of(2026, 2, 17), mondayAndWednesday)) // Tuesday
+    }
+
+    @Test
+    fun monthly_repeat_should_handle_leap_year_end_of_month() {
+        val base = LocalDate.of(2024, 1, 31)
+
+        assertTrue(useCase(RepeatType.MONTHLY, base, LocalDate.of(2024, 2, 29), null))
+        assertFalse(useCase(RepeatType.MONTHLY, base, LocalDate.of(2024, 2, 28), null))
+    }
+
+    @Test
+    fun custom_repeat_with_null_mask_should_fallback_to_base_day() {
+        val base = LocalDate.of(2026, 2, 11) // Wednesday
+
+        assertTrue(useCase(RepeatType.CUSTOM, base, LocalDate.of(2026, 2, 18), null)) // Wednesday
+        assertFalse(useCase(RepeatType.CUSTOM, base, LocalDate.of(2026, 2, 19), null)) // Thursday
+    }
 }

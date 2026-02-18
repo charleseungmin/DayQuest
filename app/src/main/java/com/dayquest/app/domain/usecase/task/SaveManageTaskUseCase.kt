@@ -1,5 +1,6 @@
 package com.dayquest.app.domain.usecase.task
 
+import com.dayquest.app.core.model.RepeatType
 import com.dayquest.app.core.model.TaskPriority
 import com.dayquest.app.data.local.entity.TaskEntity
 import com.dayquest.app.domain.repository.TaskRepository
@@ -8,12 +9,18 @@ import javax.inject.Inject
 class SaveManageTaskUseCase @Inject constructor(
     private val taskRepository: TaskRepository
 ) {
+    private companion object {
+        const val DEFAULT_REPEAT_DAYS_MASK = 1 // Monday
+    }
+
     suspend operator fun invoke(
         taskId: Long?,
         title: String,
         category: String,
         priority: TaskPriority,
         isImportant: Boolean,
+        repeatType: RepeatType,
+        repeatDaysMask: Int?,
         now: Long
     ): SaveManageTaskResult {
         val normalizedTitle = title.trim().lowercase()
@@ -24,6 +31,12 @@ class SaveManageTaskUseCase @Inject constructor(
             return SaveManageTaskResult.DuplicateTitle
         }
 
+        val normalizedRepeatDaysMask = when (repeatType) {
+            RepeatType.WEEKLY,
+            RepeatType.CUSTOM -> repeatDaysMask ?: DEFAULT_REPEAT_DAYS_MASK
+            else -> null
+        }
+
         if (taskId == null) {
             taskRepository.insert(
                 TaskEntity(
@@ -31,6 +44,8 @@ class SaveManageTaskUseCase @Inject constructor(
                     description = category,
                     priority = priority,
                     isImportant = isImportant,
+                    repeatType = repeatType,
+                    repeatDaysMask = normalizedRepeatDaysMask,
                     createdAtEpochMillis = now,
                     updatedAtEpochMillis = now
                 )
@@ -45,6 +60,8 @@ class SaveManageTaskUseCase @Inject constructor(
                 description = category,
                 priority = priority,
                 isImportant = isImportant,
+                repeatType = repeatType,
+                repeatDaysMask = normalizedRepeatDaysMask,
                 updatedAtEpochMillis = now
             )
         )

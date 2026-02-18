@@ -16,7 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.dayquest.app.core.model.RepeatType
 import com.dayquest.app.core.model.TaskPriority
+import java.time.DayOfWeek
 import com.dayquest.app.ui.model.QuestProgressUi
 import com.dayquest.app.ui.model.StreakUi
 import com.dayquest.app.ui.model.TaskFormUi
@@ -132,6 +134,8 @@ fun TaskFormCard(
     onCategoryChange: (String) -> Unit,
     onPriorityChange: (TaskPriority) -> Unit,
     onImportantChange: (Boolean) -> Unit,
+    onRepeatTypeChange: (RepeatType) -> Unit,
+    onToggleRepeatDay: (DayOfWeek) -> Unit,
     onSubmit: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -187,6 +191,54 @@ fun TaskFormCard(
                     onCheckedChange = onImportantChange
                 )
             }
+
+            Text("반복", style = MaterialTheme.typography.titleSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                RepeatType.entries.forEach { repeatType ->
+                    Button(
+                        onClick = { onRepeatTypeChange(repeatType) },
+                        enabled = form.repeatType != repeatType
+                    ) {
+                        Text(
+                            when (repeatType) {
+                                RepeatType.DAILY -> "매일"
+                                RepeatType.WEEKLY -> "매주"
+                                RepeatType.MONTHLY -> "매월"
+                                RepeatType.CUSTOM -> "커스텀"
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (form.repeatType == RepeatType.WEEKLY || form.repeatType == RepeatType.CUSTOM) {
+                val mask = form.repeatDaysMask ?: 0
+                val days = listOf(
+                    DayOfWeek.MONDAY to "월",
+                    DayOfWeek.TUESDAY to "화",
+                    DayOfWeek.WEDNESDAY to "수",
+                    DayOfWeek.THURSDAY to "목",
+                    DayOfWeek.FRIDAY to "금",
+                    DayOfWeek.SATURDAY to "토",
+                    DayOfWeek.SUNDAY to "일"
+                )
+                Text("반복 요일", style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    days.forEach { (day, label) ->
+                        val selected = (mask and (1 shl (day.value - 1))) != 0
+                        Button(onClick = { onToggleRepeatDay(day) }) {
+                            Text(if (selected) "[$label]" else label)
+                        }
+                    }
+                }
+            }
+
             Button(onClick = onSubmit) {
                 Text(if (form.editingTaskId == null) "추가" else "저장")
             }
@@ -237,7 +289,13 @@ fun TaskListCard(
                                 TaskPriority.LOW -> "낮음"
                             }
                             val importantLabel = if (task.isImportant) " · 중요" else ""
-                            Text("${task.category} · 우선순위 $priorityLabel$importantLabel · $statusLabel", style = MaterialTheme.typography.bodySmall)
+                            val repeatLabel = when (task.repeatType) {
+                                RepeatType.DAILY -> "매일"
+                                RepeatType.WEEKLY -> "매주"
+                                RepeatType.MONTHLY -> "매월"
+                                RepeatType.CUSTOM -> "커스텀"
+                            }
+                            Text("${task.category} · 우선순위 $priorityLabel$importantLabel · 반복 $repeatLabel · $statusLabel", style = MaterialTheme.typography.bodySmall)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Button(onClick = { onToggleDone(task.id) }) {

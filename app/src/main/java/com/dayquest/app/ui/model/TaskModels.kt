@@ -1,5 +1,6 @@
 package com.dayquest.app.ui.model
 
+import com.dayquest.app.core.model.RepeatType
 import com.dayquest.app.core.model.TaskPriority
 import java.util.UUID
 
@@ -11,7 +12,9 @@ data class TaskItemUi(
     val priority: TaskPriority = TaskPriority.MEDIUM,
     val isImportant: Boolean = false,
     val isDone: Boolean = false,
-    val isDeferred: Boolean = false
+    val isDeferred: Boolean = false,
+    val repeatType: RepeatType = RepeatType.DAILY,
+    val repeatDaysMask: Int? = null
 )
 
 data class TaskFormUi(
@@ -19,7 +22,9 @@ data class TaskFormUi(
     val title: String = "",
     val category: String = "일반",
     val priority: TaskPriority = TaskPriority.MEDIUM,
-    val isImportant: Boolean = false
+    val isImportant: Boolean = false,
+    val repeatType: RepeatType = RepeatType.DAILY,
+    val repeatDaysMask: Int? = null
 )
 
 data class QuestProgressUi(

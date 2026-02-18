@@ -27,6 +27,7 @@ import com.dayquest.app.ui.component.TaskFormCard
 import com.dayquest.app.ui.component.TaskListCard
 import com.dayquest.app.ui.logic.QuestFeedbackLogic
 import com.dayquest.app.ui.model.TaskManageUiState
+import java.time.DayOfWeek
 import kotlinx.coroutines.launch
 
 @Composable
@@ -82,6 +83,8 @@ fun TaskManageScreen(
                         onCategoryChange = viewModel::updateCategory,
                         onPriorityChange = viewModel::updatePriority,
                         onImportantChange = viewModel::updateImportant,
+                        onRepeatTypeChange = viewModel::updateRepeatType,
+                        onToggleRepeatDay = { day: DayOfWeek -> viewModel.toggleRepeatDay(day) },
                         onSubmit = viewModel::upsert
                     )
                     TaskListCard(

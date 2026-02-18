@@ -2,6 +2,7 @@ package com.dayquest.app.ui.screen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dayquest.app.core.model.RepeatType
 import com.dayquest.app.core.model.TaskPriority
 import com.dayquest.app.data.local.entity.TaskEntity
 import com.dayquest.app.domain.usecase.task.DeleteManageTaskUseCase
@@ -12,6 +13,7 @@ import com.dayquest.app.ui.model.TaskFormUi
 import com.dayquest.app.ui.model.TaskItemUi
 import com.dayquest.app.ui.model.TaskManageUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.DayOfWeek
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,18 +64,34 @@ class TaskManageViewModel @Inject constructor(
         _uiState.updateReady { it.copy(form = it.form.copy(isImportant = isImportant)) }
     }
 
+    fun updateRepeatType(repeatType: RepeatType) {
+        _uiState.updateReady { state ->
+            val nextMask = when (repeatType) {
+                RepeatType.WEEKLY,
+                RepeatType.CUSTOM -> state.form.repeatDaysMask ?: makeWeeklyMask(DayOfWeek.MONDAY)
+                else -> null
+            }
+            state.copy(form = state.form.copy(repeatType = repeatType, repeatDaysMask = nextMask))
+        }
+    }
+
+    fun toggleRepeatDay(dayOfWeek: DayOfWeek) {
+        _uiState.updateReady { state ->
+            if (state.form.repeatType != RepeatType.WEEKLY && state.form.repeatType != RepeatType.CUSTOM) {
+                return@updateReady state
+            }
+            val currentMask = state.form.repeatDaysMask ?: makeWeeklyMask(DayOfWeek.MONDAY)
+            val bit = 1 shl (dayOfWeek.value - 1)
+            val toggled = currentMask xor bit
+            val nextMask = if (toggled == 0) bit else toggled
+            state.copy(form = state.form.copy(repeatDaysMask = nextMask))
+        }
+    }
+
     fun edit(taskId: String) {
         _uiState.updateReady { state ->
             val task = state.tasks.firstOrNull { it.id == taskId } ?: return@updateReady state
-            state.copy(
-                form = TaskFormUi(
-                    editingTaskId = task.id,
-                    title = task.title,
-                    category = task.category,
-                    priority = task.priority,
-                    isImportant = task.isImportant
-                )
-            )
+            state.copy(form = task.toTaskFormUi())
         }
     }
 
@@ -83,16 +101,7 @@ class TaskManageViewModel @Inject constructor(
         _uiState.updateReady { state ->
             if (state.tasks.any { it.id == taskId }) {
                 pendingEditTaskId = null
-                val task = state.tasks.first { it.id == taskId }
-                state.copy(
-                    form = TaskFormUi(
-                        editingTaskId = task.id,
-                        title = task.title,
-                        category = task.category,
-                        priority = task.priority,
-                        isImportant = task.isImportant
-                    )
-                )
+                state.copy(form = state.tasks.first { it.id == taskId }.toTaskFormUi())
             } else {
                 state
             }
@@ -106,6 +115,8 @@ class TaskManageViewModel @Inject constructor(
         val category = state.form.category.trim().ifEmpty { "일반" }
         val priority = state.form.priority
         val isImportant = state.form.isImportant
+        val repeatType = state.form.repeatType
+        val repeatDaysMask = state.form.repeatDaysMask
         val taskId = state.form.editingTaskId?.toLongOrNull()
 
         viewModelScope.launch {
@@ -116,6 +127,8 @@ class TaskManageViewModel @Inject constructor(
                     category = category,
                     priority = priority,
                     isImportant = isImportant,
+                    repeatType = repeatType,
+                    repeatDaysMask = repeatDaysMask,
                     now = System.currentTimeMillis()
                 )
             ) {
@@ -179,13 +192,7 @@ class TaskManageViewModel @Inject constructor(
                         ?.let { editId ->
                             mapped.firstOrNull { it.id == editId }?.let {
                                 pendingEditTaskId = null
-                                TaskFormUi(
-                                    editingTaskId = it.id,
-                                    title = it.title,
-                                    category = it.category,
-                                    priority = it.priority,
-                                    isImportant = it.isImportant
-                                )
+                                it.toTaskFormUi()
                             }
                         }
                         ?: currentForm
@@ -212,6 +219,22 @@ private fun TaskEntity.toTaskItemUi(isDone: Boolean): TaskItemUi {
         category = description?.takeIf { it.isNotBlank() } ?: "일반",
         priority = priority,
         isImportant = isImportant,
-        isDone = isDone
+        isDone = isDone,
+        repeatType = repeatType,
+        repeatDaysMask = repeatDaysMask
     )
 }
+
+private fun TaskItemUi.toTaskFormUi(): TaskFormUi {
+    return TaskFormUi(
+        editingTaskId = id,
+        title = title,
+        category = category,
+        priority = priority,
+        isImportant = isImportant,
+        repeatType = repeatType,
+        repeatDaysMask = repeatDaysMask
+    )
+}
+
+private fun makeWeeklyMask(dayOfWeek: DayOfWeek): Int = 1 shl (dayOfWeek.value - 1)

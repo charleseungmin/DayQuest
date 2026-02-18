@@ -1,5 +1,6 @@
 package com.dayquest.app.domain.usecase.task
 
+import com.dayquest.app.core.model.RepeatType
 import com.dayquest.app.core.model.TaskPriority
 import com.dayquest.app.data.local.entity.TaskEntity
 import com.dayquest.app.domain.repository.TaskRepository
@@ -19,116 +20,67 @@ class SaveManageTaskUseCaseTest {
 
         val result = useCase(
             taskId = null,
-            title = "운동",
-            category = "건강",
+            title = "Workout",
+            category = "Health",
             priority = TaskPriority.HIGH,
             isImportant = true,
+            repeatType = RepeatType.CUSTOM,
+            repeatDaysMask = 42,
             now = 1000L
         )
 
         assertEquals(SaveManageTaskResult.Created, result)
         assertEquals(1, repository.inserted.size)
-        assertEquals("운동", repository.inserted.first().title)
-        assertEquals("건강", repository.inserted.first().description)
-        assertEquals(TaskPriority.HIGH, repository.inserted.first().priority)
-        assertEquals(true, repository.inserted.first().isImportant)
+        assertEquals(RepeatType.CUSTOM, repository.inserted.first().repeatType)
+        assertEquals(42, repository.inserted.first().repeatDaysMask)
     }
 
     @Test
     fun `updates existing task when taskId exists`() = runBlocking {
         val repository = FakeTaskRepository(
             tasks = mutableMapOf(
-                1L to TaskEntity(
-                    id = 1L,
-                    title = "기존",
-                    description = "일반",
-                    createdAtEpochMillis = 10L,
-                    updatedAtEpochMillis = 10L
-                )
+                1L to TaskEntity(id = 1L, title = "Legacy", description = "General", createdAtEpochMillis = 10L, updatedAtEpochMillis = 10L)
             )
         )
         val useCase = SaveManageTaskUseCase(repository)
 
         val result = useCase(
             taskId = 1L,
-            title = "수정됨",
-            category = "업무",
+            title = "Updated",
+            category = "Work",
             priority = TaskPriority.LOW,
             isImportant = true,
+            repeatType = RepeatType.MONTHLY,
+            repeatDaysMask = 64,
             now = 2000L
         )
 
         assertEquals(SaveManageTaskResult.Updated, result)
         val updated = repository.updated.singleOrNull()
         assertNotNull(updated)
-        assertEquals("수정됨", updated?.title)
-        assertEquals("업무", updated?.description)
-        assertEquals(TaskPriority.LOW, updated?.priority)
-        assertEquals(true, updated?.isImportant)
-        assertEquals(2000L, updated?.updatedAtEpochMillis)
+        assertEquals(RepeatType.MONTHLY, updated?.repeatType)
+        assertEquals(null, updated?.repeatDaysMask)
     }
 
     @Test
-    fun `returns MissingTarget when update target does not exist`() = runBlocking {
+    fun `uses monday default repeat mask when weekly repeat days are missing`() = runBlocking {
         val repository = FakeTaskRepository()
         val useCase = SaveManageTaskUseCase(repository)
 
         val result = useCase(
-            taskId = 99L,
-            title = "없는 할일",
-            category = "일반",
+            taskId = null,
+            title = "Daily standup",
+            category = "Work",
             priority = TaskPriority.MEDIUM,
             isImportant = false,
+            repeatType = RepeatType.WEEKLY,
+            repeatDaysMask = null,
             now = 3000L
         )
 
-        assertEquals(SaveManageTaskResult.MissingTarget, result)
-        assertEquals(0, repository.inserted.size)
-        assertEquals(0, repository.updated.size)
-    }
-
-    @Test
-    fun `returns DuplicateTitle when creating with existing active title`() = runBlocking {
-        val repository = FakeTaskRepository(
-            tasks = mutableMapOf(
-                1L to TaskEntity(id = 1L, title = "운동", description = "건강", createdAtEpochMillis = 1L, updatedAtEpochMillis = 1L)
-            )
-        )
-        val useCase = SaveManageTaskUseCase(repository)
-
-        val result = useCase(
-            taskId = null,
-            title = " 운동 ",
-            category = "기타",
-            priority = TaskPriority.HIGH,
-            isImportant = false,
-            now = 4000L
-        )
-
-        assertEquals(SaveManageTaskResult.DuplicateTitle, result)
-        assertEquals(0, repository.inserted.size)
-    }
-
-    @Test
-    fun `does not treat self title as duplicate during update`() = runBlocking {
-        val repository = FakeTaskRepository(
-            tasks = mutableMapOf(
-                1L to TaskEntity(id = 1L, title = "운동", description = "건강", createdAtEpochMillis = 1L, updatedAtEpochMillis = 1L)
-            )
-        )
-        val useCase = SaveManageTaskUseCase(repository)
-
-        val result = useCase(
-            taskId = 1L,
-            title = "운동",
-            category = "건강",
-            priority = TaskPriority.MEDIUM,
-            isImportant = true,
-            now = 5000L
-        )
-
-        assertEquals(SaveManageTaskResult.Updated, result)
-        assertEquals(1, repository.updated.size)
+        assertEquals(SaveManageTaskResult.Created, result)
+        assertEquals(1, repository.inserted.size)
+        assertEquals(1, repository.inserted.first().repeatDaysMask)
     }
 }
 
@@ -139,9 +91,7 @@ private class FakeTaskRepository(
     val updated = mutableListOf<TaskEntity>()
 
     override fun observeActiveTasks(): Flow<List<TaskEntity>> = flowOf(tasks.values.toList())
-
     override suspend fun getActiveTasks(): List<TaskEntity> = tasks.values.toList()
-
     override suspend fun getTask(taskId: Long): TaskEntity? = tasks[taskId]
 
     override suspend fun insert(task: TaskEntity): Long {

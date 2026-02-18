@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.fail
 import org.junit.Test
 import java.time.LocalDate
 
@@ -80,6 +81,24 @@ class UpdateDailyItemStatusUseCaseTest {
         assertNotNull(deferredItem)
         assertEquals(DailyItemStatus.TODO, deferredItem?.status)
         assertEquals(2000L, deferredItem?.createdAtEpochMillis)
+    }
+
+    @Test
+    fun deferred_with_past_date_throws_exception() = runBlocking {
+        val dao = FakeDailyItemDaoForUpdate()
+        val useCase = UpdateDailyItemStatusUseCase(dao)
+
+        try {
+            useCase(
+                1L,
+                DailyItemStatus.DEFERRED,
+                nowEpochMillis = 2000L,
+                deferToDate = LocalDate.of(2026, 2, 13)
+            )
+            fail("Expected IllegalArgumentException")
+        } catch (_: IllegalArgumentException) {
+            // expected
+        }
     }
 }
 

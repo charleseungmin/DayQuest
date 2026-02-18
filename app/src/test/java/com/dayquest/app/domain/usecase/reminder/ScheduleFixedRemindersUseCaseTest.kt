@@ -11,22 +11,43 @@ class ScheduleFixedRemindersUseCaseTest {
         val scheduler = FakeReminderScheduler()
         val useCase = ScheduleFixedRemindersUseCase(scheduler)
 
-        useCase()
+        useCase.scheduleAll()
 
         assertEquals(
             listOf(
                 Triple(ScheduleFixedRemindersUseCase.MORNING_REMINDER_ID, 7, 0),
                 Triple(ScheduleFixedRemindersUseCase.EVENING_REMINDER_ID, 21, 0)
             ),
-            scheduler.calls
+            scheduler.scheduleCalls
+        )
+    }
+
+    @Test
+    fun cancels_both_fixed_reminders() = runBlocking {
+        val scheduler = FakeReminderScheduler()
+        val useCase = ScheduleFixedRemindersUseCase(scheduler)
+
+        useCase.cancelAll()
+
+        assertEquals(
+            listOf(
+                ScheduleFixedRemindersUseCase.MORNING_REMINDER_ID,
+                ScheduleFixedRemindersUseCase.EVENING_REMINDER_ID
+            ),
+            scheduler.cancelCalls
         )
     }
 }
 
 private class FakeReminderScheduler : ReminderScheduler {
-    val calls = mutableListOf<Triple<String, Int, Int>>()
+    val scheduleCalls = mutableListOf<Triple<String, Int, Int>>()
+    val cancelCalls = mutableListOf<String>()
 
     override suspend fun scheduleDaily(id: String, hour: Int, minute: Int) {
-        calls += Triple(id, hour, minute)
+        scheduleCalls += Triple(id, hour, minute)
+    }
+
+    override suspend fun cancelDaily(id: String) {
+        cancelCalls += id
     }
 }

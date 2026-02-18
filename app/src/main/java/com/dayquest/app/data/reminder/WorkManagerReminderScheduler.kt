@@ -40,4 +40,8 @@ class WorkManagerReminderScheduler @Inject constructor(
             .getInstance(context)
             .enqueueUniquePeriodicWork(id, ExistingPeriodicWorkPolicy.UPDATE, work)
     }
+
+    override suspend fun cancelDaily(id: String) {
+        WorkManager.getInstance(context).cancelUniqueWork(id)
+    }
 }

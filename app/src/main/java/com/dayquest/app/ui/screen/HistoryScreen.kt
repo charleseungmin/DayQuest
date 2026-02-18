@@ -2,9 +2,11 @@ package com.dayquest.app.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -17,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.dayquest.app.ui.component.ErrorCard
 import com.dayquest.app.ui.component.LoadingCard
 import com.dayquest.app.ui.component.ScreenSectionHeader
+import com.dayquest.app.ui.model.HistoryPeriodUi
 import com.dayquest.app.ui.model.HistoryUiState
 
 @Composable
@@ -55,12 +58,27 @@ fun HistoryScreen(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("주간", style = MaterialTheme.typography.titleMedium)
-                        Text("이번 주 누적 완료 ${state.weeklyDoneCount}개 · 미룸 ${state.weeklyDeferredCount}개 / 총 ${state.weeklyTotalCount}개")
-                        val rate = if (state.weeklyTotalCount == 0) 0 else (state.weeklyDoneCount * 100 / state.weeklyTotalCount)
-                        Text("주간 완료율 ${rate}%")
+                        Text("기간 요약", style = MaterialTheme.typography.titleMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            HistoryPeriodUi.entries.forEach { period ->
+                                Button(
+                                    onClick = { viewModel.selectPeriod(period) },
+                                    enabled = state.selectedPeriod != period
+                                ) {
+                                    Text(period.label)
+                                }
+                            }
+                        }
+
+                        val rate = if (state.periodTotalCount == 0) 0 else (state.periodDoneCount * 100 / state.periodTotalCount)
+                        Text("${state.selectedPeriod.label} 완료 ${state.periodDoneCount}개 · 미룸 ${state.periodDeferredCount}개 / 총 ${state.periodTotalCount}개")
+                        Text("완료율 ${rate}%")
+
+                        Button(onClick = viewModel::toggleShowOnlyActiveDays) {
+                            Text(if (state.showOnlyActiveDays) "빈 날짜 포함해서 보기" else "기록 있는 날짜만 보기")
+                        }
                     }
                 }
 
@@ -71,10 +89,15 @@ fun HistoryScreen(
                     ) {
                         Text("최근 진행", style = MaterialTheme.typography.titleMedium)
                         if (state.dailyProgress.isEmpty()) {
-                            Text("이번 주 기록이 아직 없습니다.")
+                            val emptyMessage = if (state.showOnlyActiveDays) {
+                                "선택한 기간에 기록된 날짜가 없습니다."
+                            } else {
+                                "선택한 기간의 기록이 아직 없습니다."
+                            }
+                            Text(emptyMessage)
                         } else {
                             state.dailyProgress.forEach { day ->
-                                Text("${day.dateLabel} · 완료 ${day.doneCount}/${day.totalCount}")
+                                Text("${day.dateLabel}(${day.weekdayLabel}) · 완료 ${day.doneCount} · 미룸 ${day.deferredCount} / 총 ${day.totalCount} · 완료율 ${day.completionRate}%")
                             }
                         }
                     }

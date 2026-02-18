@@ -53,10 +53,14 @@ class TaskManageViewModel @Inject constructor(
         _uiState.updateReady { it.copy(form = it.form.copy(category = category)) }
     }
 
+    fun updateImportant(isImportant: Boolean) {
+        _uiState.updateReady { it.copy(form = it.form.copy(isImportant = isImportant)) }
+    }
+
     fun edit(taskId: String) {
         _uiState.updateReady { state ->
             val task = state.tasks.firstOrNull { it.id == taskId } ?: return@updateReady state
-            state.copy(form = TaskFormUi(editingTaskId = task.id, title = task.title, category = task.category))
+            state.copy(form = TaskFormUi(editingTaskId = task.id, title = task.title, category = task.category, isImportant = task.isImportant))
         }
     }
 
@@ -67,7 +71,7 @@ class TaskManageViewModel @Inject constructor(
             if (state.tasks.any { it.id == taskId }) {
                 pendingEditTaskId = null
                 val task = state.tasks.first { it.id == taskId }
-                state.copy(form = TaskFormUi(editingTaskId = task.id, title = task.title, category = task.category))
+                state.copy(form = TaskFormUi(editingTaskId = task.id, title = task.title, category = task.category, isImportant = task.isImportant))
             } else {
                 state
             }
@@ -79,10 +83,11 @@ class TaskManageViewModel @Inject constructor(
         val title = state.form.title.trim()
         if (title.isEmpty()) return
         val category = state.form.category.trim().ifEmpty { "일반" }
+        val isImportant = state.form.isImportant
         val taskId = state.form.editingTaskId?.toLongOrNull()
 
         viewModelScope.launch {
-            when (saveManageTaskUseCase(taskId = taskId, title = title, category = category, now = System.currentTimeMillis())) {
+            when (saveManageTaskUseCase(taskId = taskId, title = title, category = category, isImportant = isImportant, now = System.currentTimeMillis())) {
                 SaveManageTaskResult.Created,
                 SaveManageTaskResult.Updated -> _uiState.updateReady { it.copy(form = TaskFormUi(), noticeMessage = null) }
 
@@ -92,6 +97,12 @@ class TaskManageViewModel @Inject constructor(
                             form = it.form.copy(editingTaskId = null),
                             noticeMessage = "수정 대상 할 일을 찾지 못했어요. 내용은 유지했으니 다시 저장해 주세요."
                         )
+                    }
+                }
+
+                SaveManageTaskResult.DuplicateTitle -> {
+                    _uiState.updateReady {
+                        it.copy(noticeMessage = "같은 이름의 할 일이 이미 있어요. 제목을 다르게 입력해 주세요.")
                     }
                 }
             }
@@ -137,7 +148,7 @@ class TaskManageViewModel @Inject constructor(
                         ?.let { editId ->
                             mapped.firstOrNull { it.id == editId }?.let {
                                 pendingEditTaskId = null
-                                TaskFormUi(editingTaskId = it.id, title = it.title, category = it.category)
+                                TaskFormUi(editingTaskId = it.id, title = it.title, category = it.category, isImportant = it.isImportant)
                             }
                         }
                         ?: currentForm
@@ -162,6 +173,7 @@ private fun TaskEntity.toTaskItemUi(isDone: Boolean): TaskItemUi {
         id = id.toString(),
         title = title,
         category = description?.takeIf { it.isNotBlank() } ?: "일반",
+        isImportant = isImportant,
         isDone = isDone
     )
 }

@@ -7,5 +7,6 @@ data class TodayTaskRow(
     val sourceTaskId: Long,
     val title: String,
     val category: String,
+    val isImportant: Boolean,
     val status: DailyItemStatus
 )

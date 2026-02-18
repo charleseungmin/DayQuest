@@ -65,11 +65,21 @@ class UpdateDailyItemStatusUseCaseTest {
         assertEquals(1, dao.countByDateAndTask("2026-02-15", 10L))
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun deferred_without_date_throws() = runBlocking {
+    @Test
+    fun deferred_without_date_defaults_to_next_day_and_creates_item() = runBlocking {
         val dao = FakeDailyItemDaoForUpdate()
         val useCase = UpdateDailyItemStatusUseCase(dao)
+
         useCase(1L, DailyItemStatus.DEFERRED, nowEpochMillis = 2000L)
+
+        val updated = dao.getById(1L)
+        assertEquals(DailyItemStatus.DEFERRED, updated?.status)
+        assertEquals("2026-02-15", updated?.deferredToDateKey)
+
+        val deferredItem = dao.findByDateAndTask("2026-02-15", 10L)
+        assertNotNull(deferredItem)
+        assertEquals(DailyItemStatus.TODO, deferredItem?.status)
+        assertEquals(2000L, deferredItem?.createdAtEpochMillis)
     }
 }
 
@@ -113,9 +123,18 @@ private class FakeDailyItemDaoForUpdate(
     }
 
     override suspend fun countByDate(dateKey: String): Int = items.values.count { it.dateKey == dateKey }
+    override fun observeCountByDate(dateKey: String): Flow<Int> = flowOf(items.values.count { it.dateKey == dateKey })
 
     override suspend fun countByDateAndStatus(dateKey: String, status: DailyItemStatus): Int =
         items.values.count { it.dateKey == dateKey && it.status == status }
+    override fun observeCountByDateAndStatus(dateKey: String, status: DailyItemStatus): Flow<Int> =
+        flowOf(items.values.count { it.dateKey == dateKey && it.status == status })
+    override fun observeCountByDateRangeAndStatus(startDateKey: String, endDateKey: String, status: DailyItemStatus): Flow<Int> =
+        flowOf(items.values.count { it.dateKey in startDateKey..endDateKey && it.status == status })
+    override fun observeCountByDateRange(startDateKey: String, endDateKey: String): Flow<Int> =
+        flowOf(items.values.count { it.dateKey in startDateKey..endDateKey })
+    override fun observeDailyProgressByDateRange(startDateKey: String, endDateKey: String): Flow<List<com.dayquest.app.data.local.projection.HistoryDailyProgressRow>> =
+        flowOf(emptyList())
 
     override suspend fun countImportantByDateAndStatus(dateKey: String, status: DailyItemStatus): Int = 0
 

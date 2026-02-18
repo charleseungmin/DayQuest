@@ -32,8 +32,8 @@ class UpdateDailyItemStatusUseCase @Inject constructor(
             }
 
             DailyItemStatus.DEFERRED -> {
-                val deferDate = deferToDate ?: throw IllegalArgumentException("deferToDate is required for DEFERRED")
                 val sourceDate = LocalDate.parse(item.dateKey, DateTimeFormatter.ISO_LOCAL_DATE)
+                val deferDate = deferToDate ?: sourceDate.plusDays(1)
                 require(!deferDate.isBefore(sourceDate)) { "deferToDate must be same or after source date" }
 
                 val deferDateKey = deferDate.format(DateTimeFormatter.ISO_LOCAL_DATE)

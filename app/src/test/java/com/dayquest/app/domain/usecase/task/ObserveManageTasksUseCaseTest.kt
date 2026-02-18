@@ -36,6 +36,8 @@ private class ObserveFakeTaskRepository(
 ) : TaskRepository {
     override fun observeActiveTasks(): Flow<List<TaskEntity>> = flowOf(tasks)
 
+    override suspend fun getActiveTasks(): List<TaskEntity> = tasks
+
     override suspend fun getTask(taskId: Long): TaskEntity? = null
 
     override suspend fun insert(task: TaskEntity): Long = 0L

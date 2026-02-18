@@ -80,6 +80,7 @@ fun TaskManageScreen(
                         form = state.form,
                         onTitleChange = viewModel::updateTitle,
                         onCategoryChange = viewModel::updateCategory,
+                        onImportantChange = viewModel::updateImportant,
                         onSubmit = viewModel::upsert
                     )
                     TaskListCard(

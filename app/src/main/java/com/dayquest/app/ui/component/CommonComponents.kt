@@ -10,12 +10,14 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.dayquest.app.ui.model.QuestProgressUi
+import com.dayquest.app.ui.model.StreakUi
 import com.dayquest.app.ui.model.TaskFormUi
 import com.dayquest.app.ui.model.TaskItemUi
 
@@ -62,6 +64,19 @@ fun QuestProgressCard(progress: QuestProgressUi) {
         ) {
             Text("오늘의 퀘스트", style = MaterialTheme.typography.titleMedium)
             Text("진행도 ${progress.doneCount} / ${progress.totalCount}")
+        }
+    }
+}
+
+@Composable
+fun StreakStatusCard(streak: StreakUi) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text("연속 달성", style = MaterialTheme.typography.titleMedium)
+            Text("현재 ${streak.currentStreak}일 · 최고 ${streak.bestStreak}일")
         }
     }
 }
@@ -114,6 +129,7 @@ fun TaskFormCard(
     form: TaskFormUi,
     onTitleChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
+    onImportantChange: (Boolean) -> Unit,
     onSubmit: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -139,6 +155,17 @@ fun TaskFormCard(
                 label = { Text("카테고리") },
                 singleLine = true
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("중요 작업")
+                Switch(
+                    checked = form.isImportant,
+                    onCheckedChange = onImportantChange
+                )
+            }
             Button(onClick = onSubmit) {
                 Text(if (form.editingTaskId == null) "추가" else "저장")
             }
@@ -183,7 +210,8 @@ fun TaskListCard(
                                 task.isDeferred -> "미룸"
                                 else -> "진행중"
                             }
-                            Text("${task.category} · $statusLabel", style = MaterialTheme.typography.bodySmall)
+                            val importantLabel = if (task.isImportant) " · 중요" else ""
+                            Text("${task.category}$importantLabel · $statusLabel", style = MaterialTheme.typography.bodySmall)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Button(onClick = { onToggleDone(task.id) }) {

@@ -1,17 +1,14 @@
 package com.dayquest.app.ui.navigation
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -38,27 +35,19 @@ private const val MANAGE_ROUTE_WITH_OPTIONAL_EDIT = "manage?$EDIT_TASK_ID_ARG={$
 fun DayQuestNavHost() {
     val navController = rememberNavController()
     val navBackStackEntry = navController.currentBackStackEntryAsState().value
-    val selectedRoute = navBackStackEntry?.destination?.route ?: DayQuestRoute.Today.route
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            NavigationBar {
                 DayQuestRoute.entries.forEach { destination ->
                     val isSelected = navBackStackEntry
                         ?.destination
                         ?.hierarchy
                         ?.any { it.route == destination.route } == true
-                    Button(
+
+                    NavigationBarItem(
+                        selected = isSelected,
                         onClick = {
                             navController.navigate(destination.route) {
                                 popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -66,23 +55,26 @@ fun DayQuestNavHost() {
                                 restoreState = true
                             }
                         },
-                        enabled = !isSelected
-                    ) {
-                        Text(destination.label)
-                    }
+                        icon = {
+                            Text(
+                                text = destination.label,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        label = {
+                            Text(destination.label)
+                        }
+                    )
                 }
             }
         }
-
-        Text(
-            text = "현재 섹션: $selectedRoute",
-            style = MaterialTheme.typography.bodySmall
-        )
-
+    ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = DayQuestRoute.Today.route,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
             composable(DayQuestRoute.Today.route) {
                 TodayScreen(

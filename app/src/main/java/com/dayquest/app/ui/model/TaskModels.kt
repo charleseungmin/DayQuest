@@ -7,6 +7,7 @@ data class TaskItemUi(
     val sourceTaskId: String? = null,
     val title: String,
     val category: String,
+    val isImportant: Boolean = false,
     val isDone: Boolean = false,
     val isDeferred: Boolean = false
 )
@@ -14,7 +15,8 @@ data class TaskItemUi(
 data class TaskFormUi(
     val editingTaskId: String? = null,
     val title: String = "",
-    val category: String = "일반"
+    val category: String = "일반",
+    val isImportant: Boolean = false
 )
 
 data class QuestProgressUi(
@@ -22,11 +24,17 @@ data class QuestProgressUi(
     val totalCount: Int
 )
 
+data class StreakUi(
+    val currentStreak: Int = 0,
+    val bestStreak: Int = 0
+)
+
 data class SettingsUiState(
     val notificationsEnabled: Boolean = true,
     val resetDone: Boolean = false,
     val isLoading: Boolean = false,
     val isResetting: Boolean = false,
+    val isSyncingToday: Boolean = false,
     val errorMessage: String? = null,
     val noticeMessage: String? = null
 )
@@ -34,17 +42,27 @@ data class SettingsUiState(
 sealed interface TodayUiState {
     data object Loading : TodayUiState
     data class Ready(
-        val tasks: List<TaskItemUi> = emptyList()
+        val tasks: List<TaskItemUi> = emptyList(),
+        val streak: StreakUi = StreakUi()
     ) : TodayUiState
 
     data class Error(val message: String) : TodayUiState
 }
 
 data class HistoryDayProgressUi(
+    val dateKey: String,
     val dateLabel: String,
+    val weekdayLabel: String,
     val doneCount: Int,
-    val totalCount: Int
+    val deferredCount: Int,
+    val totalCount: Int,
+    val completionRate: Int
 )
+
+enum class HistoryPeriodUi(val label: String, val days: Long) {
+    Weekly("최근 7일", 7),
+    Monthly("최근 30일", 30)
+}
 
 sealed interface HistoryUiState {
     data object Loading : HistoryUiState
@@ -52,9 +70,11 @@ sealed interface HistoryUiState {
         val todayDoneCount: Int,
         val todayDeferredCount: Int,
         val todayTotalCount: Int,
-        val weeklyDoneCount: Int,
-        val weeklyDeferredCount: Int,
-        val weeklyTotalCount: Int,
+        val selectedPeriod: HistoryPeriodUi,
+        val periodDoneCount: Int,
+        val periodDeferredCount: Int,
+        val periodTotalCount: Int,
+        val showOnlyActiveDays: Boolean,
         val dailyProgress: List<HistoryDayProgressUi>
     ) : HistoryUiState
 

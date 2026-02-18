@@ -13,6 +13,8 @@ class TaskRepositoryImpl @Inject constructor(
 ) : TaskRepository {
     override fun observeActiveTasks(): Flow<List<TaskEntity>> = taskDao.observeActiveTasks()
 
+    override suspend fun getActiveTasks(): List<TaskEntity> = taskDao.getActiveTasks()
+
     override suspend fun getTask(taskId: Long): TaskEntity? = taskDao.getById(taskId)
 
     override suspend fun insert(task: TaskEntity): Long = taskDao.insert(task)

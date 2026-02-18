@@ -28,6 +28,8 @@ private class DeleteFakeTaskRepository : TaskRepository {
 
     override fun observeActiveTasks(): Flow<List<TaskEntity>> = flowOf(emptyList())
 
+    override suspend fun getActiveTasks(): List<TaskEntity> = emptyList()
+
     override suspend fun getTask(taskId: Long): TaskEntity? = null
 
     override suspend fun insert(task: TaskEntity): Long = 0L

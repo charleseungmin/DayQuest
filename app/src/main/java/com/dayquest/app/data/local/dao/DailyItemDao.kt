@@ -22,6 +22,7 @@ interface DailyItemDao {
                di.taskId AS sourceTaskId,
                t.title AS title,
                COALESCE(t.description, '일반') AS category,
+               t.isImportant AS isImportant,
                di.status AS status
         FROM daily_items di
         INNER JOIN tasks t ON t.id = di.taskId
@@ -80,7 +81,8 @@ interface DailyItemDao {
         """
         SELECT dateKey AS dateKey,
                COUNT(*) AS totalCount,
-               SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) AS doneCount
+               SUM(CASE WHEN status = 'DONE' THEN 1 ELSE 0 END) AS doneCount,
+               SUM(CASE WHEN status = 'DEFERRED' THEN 1 ELSE 0 END) AS deferredCount
         FROM daily_items
         WHERE dateKey BETWEEN :startDateKey AND :endDateKey
         GROUP BY dateKey

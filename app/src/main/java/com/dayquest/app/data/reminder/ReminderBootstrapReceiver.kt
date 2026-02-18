@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.dayquest.app.domain.usecase.reminder.ScheduleFixedRemindersUseCase
+import com.dayquest.app.domain.usecase.settings.GetNotificationEnabledUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -17,13 +18,22 @@ class ReminderBootstrapReceiver : BroadcastReceiver() {
     @Inject
     lateinit var scheduleFixedRemindersUseCase: ScheduleFixedRemindersUseCase
 
+    @Inject
+    lateinit var getNotificationEnabledUseCase: GetNotificationEnabledUseCase
+
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action ?: return
         if (action !in SUPPORTED_ACTIONS) return
 
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
-            runCatching { scheduleFixedRemindersUseCase() }
+            runCatching {
+                if (getNotificationEnabledUseCase()) {
+                    scheduleFixedRemindersUseCase.scheduleAll()
+                } else {
+                    scheduleFixedRemindersUseCase.cancelAll()
+                }
+            }
             pendingResult.finish()
         }
     }

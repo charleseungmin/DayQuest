@@ -4,14 +4,24 @@ import javax.inject.Inject
 
 interface ReminderScheduler {
     suspend fun scheduleDaily(id: String, hour: Int, minute: Int)
+    suspend fun cancelDaily(id: String)
 }
 
 class ScheduleFixedRemindersUseCase @Inject constructor(
     private val reminderScheduler: ReminderScheduler
 ) {
     suspend operator fun invoke() {
+        scheduleAll()
+    }
+
+    suspend fun scheduleAll() {
         reminderScheduler.scheduleDaily(id = MORNING_REMINDER_ID, hour = 7, minute = 0)
         reminderScheduler.scheduleDaily(id = EVENING_REMINDER_ID, hour = 21, minute = 0)
+    }
+
+    suspend fun cancelAll() {
+        reminderScheduler.cancelDaily(MORNING_REMINDER_ID)
+        reminderScheduler.cancelDaily(EVENING_REMINDER_ID)
     }
 
     companion object {

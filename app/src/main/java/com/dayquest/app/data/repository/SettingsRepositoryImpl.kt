@@ -25,6 +25,8 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override fun observeNotificationsEnabled(): Flow<Boolean> = notificationState.asStateFlow()
 
+    override suspend fun getNotificationsEnabled(): Boolean = notificationState.value
+
     override suspend fun setNotificationsEnabled(enabled: Boolean) {
         sharedPreferences.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply()
         notificationState.value = enabled

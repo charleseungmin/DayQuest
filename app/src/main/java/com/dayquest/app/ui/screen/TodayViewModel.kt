@@ -37,7 +37,7 @@ class TodayViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<TodayUiState>(TodayUiState.Loading)
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
 
-    private val today: LocalDate = LocalDate.now()
+    private var observedDate: LocalDate = LocalDate.now()
     private var observeJob: Job? = null
 
     init {
@@ -48,19 +48,20 @@ class TodayViewModel @Inject constructor(
         observeJob?.cancel()
         _uiState.value = TodayUiState.Loading
         observeJob = viewModelScope.launch {
+            observedDate = LocalDate.now()
             val now = System.currentTimeMillis()
             runCatching {
-                generateTodayItemsUseCase(today, now)
-                syncDailyQuestsUseCase.ensureQuestMeta(today)
-                syncDailyQuestsUseCase.syncProgress(today, now)
-                recalculateStreakUseCase(today, now)
+                generateTodayItemsUseCase(observedDate, now)
+                syncDailyQuestsUseCase.ensureQuestMeta(observedDate)
+                syncDailyQuestsUseCase.syncProgress(observedDate, now)
+                recalculateStreakUseCase(observedDate, now)
             }.onFailure {
                 _uiState.value = TodayUiState.Error("오늘 할 일 생성을 실패했습니다.")
                 return@launch
             }
 
             combine(
-                observeTodayTasksUseCase(today),
+                observeTodayTasksUseCase(observedDate),
                 observeStreakUseCase()
             ) { rows, streak ->
                 TodayUiState.Ready(
@@ -78,29 +79,32 @@ class TodayViewModel @Inject constructor(
     fun toggleDone(taskId: String, isDone: Boolean) {
         val dailyItemId = taskId.toLongOrNull() ?: return
         viewModelScope.launch {
+            if (refreshIfDateChanged()) return@launch
             val now = System.currentTimeMillis()
             updateDailyItemStatusUseCase(
                 dailyItemId = dailyItemId,
                 toStatus = if (isDone) DailyItemStatus.TODO else DailyItemStatus.DONE,
                 nowEpochMillis = now
             )
-            syncDailyQuestsUseCase.syncProgress(today, now)
-            recalculateStreakUseCase(today, now)
+            syncDailyQuestsUseCase.ensureQuestMeta(observedDate)
+            syncDailyQuestsUseCase.syncProgress(observedDate, now)
+            recalculateStreakUseCase(observedDate, now)
         }
     }
 
     fun toggleDeferred(taskId: String, isDeferred: Boolean) {
         val dailyItemId = taskId.toLongOrNull() ?: return
         viewModelScope.launch {
+            if (refreshIfDateChanged()) return@launch
             val now = System.currentTimeMillis()
             updateDailyItemStatusUseCase(
                 dailyItemId = dailyItemId,
                 toStatus = if (isDeferred) DailyItemStatus.TODO else DailyItemStatus.DEFERRED,
                 nowEpochMillis = now
             )
-            syncDailyQuestsUseCase.ensureQuestMeta(today)
-            syncDailyQuestsUseCase.syncProgress(today, now)
-            recalculateStreakUseCase(today, now)
+            syncDailyQuestsUseCase.ensureQuestMeta(observedDate)
+            syncDailyQuestsUseCase.syncProgress(observedDate, now)
+            recalculateStreakUseCase(observedDate, now)
         }
     }
 
@@ -109,6 +113,15 @@ class TodayViewModel @Inject constructor(
         viewModelScope.launch {
             deleteManageTaskUseCase(targetTaskId, System.currentTimeMillis())
         }
+    }
+
+    private fun refreshIfDateChanged(): Boolean {
+        val nowDate = LocalDate.now()
+        if (nowDate != observedDate) {
+            refresh()
+            return true
+        }
+        return false
     }
 }
 

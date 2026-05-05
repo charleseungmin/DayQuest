@@ -2,10 +2,12 @@ package com.dayquest.app
 
 import android.app.Application
 import androidx.room.Room
+import com.dayquest.app.domain.usecase.reminder.ScheduleFixedRemindersUseCase
 import com.dayquest.data.DayQuestDatabase
 import com.dayquest.data.RoomDayQuestRepository
 import com.dayquest.reminder.DayQuestReminderManager
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,7 +15,11 @@ import kotlinx.coroutines.launch
 
 @HiltAndroidApp
 class DayQuestApp : Application() {
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    @Inject
+    lateinit var scheduleFixedRemindersUseCase: ScheduleFixedRemindersUseCase
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val database: DayQuestDatabase by lazy {
         Room.databaseBuilder(this, DayQuestDatabase::class.java, "dayquest.db")
@@ -47,8 +53,7 @@ class DayQuestApp : Application() {
     override fun onCreate() {
         super.onCreate()
         appScope.launch {
-            repository.seedIfEmpty()
-            reminderManager.refreshSchedule()
+            scheduleFixedRemindersUseCase()
         }
     }
 }

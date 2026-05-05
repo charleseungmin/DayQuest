@@ -3,6 +3,7 @@ package com.dayquest.domain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -60,6 +61,39 @@ class GoalTimeReminderSchedulerTest {
                 ZonedDateTime.of(2026, 2, 14, 21, 0, 0, 0, zone),
                 ZonedDateTime.of(2026, 2, 15, 7, 0, 0, 0, zone),
                 ZonedDateTime.of(2026, 2, 15, 21, 0, 0, 0, zone)
+            ),
+            reminders
+        )
+    }
+
+    @Test
+    fun `nextReminder skips inactive days`() {
+        val now = ZonedDateTime.of(2026, 2, 13, 22, 0, 0, 0, zone) // Friday
+
+        val next = scheduler.nextReminder(
+            now = now,
+            goalTimes = listOf(LocalTime.of(7, 0)),
+            activeDays = setOf(DayOfWeek.MONDAY)
+        )
+
+        assertEquals(ZonedDateTime.of(2026, 2, 16, 7, 0, 0, 0, zone), next)
+    }
+
+    @Test
+    fun `upcomingReminders filters by active days`() {
+        val from = ZonedDateTime.of(2026, 2, 14, 6, 0, 0, 0, zone) // Saturday
+
+        val reminders = scheduler.upcomingReminders(
+            from = from,
+            goalTimes = listOf(LocalTime.of(7, 0)),
+            days = 4,
+            activeDays = setOf(DayOfWeek.SATURDAY, DayOfWeek.MONDAY)
+        )
+
+        assertEquals(
+            listOf(
+                ZonedDateTime.of(2026, 2, 14, 7, 0, 0, 0, zone),
+                ZonedDateTime.of(2026, 2, 16, 7, 0, 0, 0, zone)
             ),
             reminders
         )
